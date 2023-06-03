@@ -1,4 +1,4 @@
-# SQL-Assigment-4
+# SQL-Assigment-3
 Suppose you have used scripts in Assignment 2 to create tables. Please write ananonymous PL/SQL program for each the following problems. 
 
 Problem 1:  Please write an anonymous PL/SQL program to print out the first10 numbers of the following sequence F(n).F(0) = 2, F(1)=5. F(n)=5*F(n-1)-4*F(n-2).E.g., F(3) = 5*F(2) - 4 F(1) = 5*5-4*2=17,....Your program will print out F(0),F(1),..., F(9).
