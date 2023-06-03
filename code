@@ -1,0 +1,216 @@
+drop table ticket_detail cascade constraints; 
+drop table ticket cascade constraints; 
+drop table topic cascade constraints;
+drop table support cascade constraints; 
+drop table client cascade constraints; 
+
+create table client 
+(clid int, 
+clname varchar(50),
+clemail varchar(50),
+primary key(clid));
+
+insert into client values
+(1, 'Ella','ella@gmail.com');
+
+insert into client values
+(2, 'Eric','eric@gmail.com');
+
+insert into client values
+(3, 'Olivia','olivia@gmail.com');
+
+create table support 
+(sid int, 
+sname varchar(50),
+semail varchar(50),
+primary key (sid));
+
+insert into support 
+values(1,'Nancy','nancy@gmail.com');
+
+insert into support 
+values(2,'Ethan','ethan@gmail.com');
+
+insert into support 
+values(3,'Grace','grace@gmail.com');
+
+insert into support 
+values(4,'John','john@gmail.com');
+
+create table topic 
+(tid int, 
+tname varchar(50),
+ptid int, 
+primary key (tid),
+foreign key (ptid) references topic);
+
+insert into topic 
+values(1,'computing technology',null);
+
+insert into topic values(2,'network connection',1);
+
+insert into topic 
+values(3, 'software',1);
+
+insert into topic 
+values(8, 'microsoft',3);
+
+insert into topic 
+values(4,'email',1);
+
+insert into topic 
+values(5,'academic',null);
+
+insert into topic 
+values(6, 'advising',5);
+
+insert into topic 
+values(7, 'registration',5);
+
+create table ticket 
+(tkid int, 
+clid int, 
+tid int, 
+sid int, 
+tktime timestamp,
+rstime timestamp, 
+status int, 
+description varchar(100),
+primary key (tkid),
+foreign key (clid) references client, 
+foreign key (tid) references topic, 
+foreign key (sid) references support);
+
+-- microsoft issue submitted by Ella, assigned 
+insert into ticket values 
+(1,1, 8, 1,timestamp '2022-10-1 10:05:00.00', null, 1,'I have trouble installing office on my office computer');
+
+-- registration issue by Ella, resolved
+insert into ticket values 
+(2,1, 7,1, timestamp '2022-10-2 12:05:00.00', timestamp '2022-10-3 8:00:00.00', 1, 
+'I have trouble access the registration page');
+
+-- email issue by Eric, initialized  
+insert into ticket values 
+(3,2, 4,null, timestamp '2022-10-3 15:05:00.00', null,1, 'I forgot my email password');
+
+-- network issue by Olivia, ongoing
+insert into ticket values 
+(4,3, 2,2, timestamp '2022-10-6 09:05:00.00',null, 1, 'I have connection issue at home');
+
+insert into ticket values 
+(5,3, 3, null, timestamp '2022-10-10 09:05:00.00',null, 1, 'I cannot log into blackboard');
+
+create table ticket_detail 
+(tdid int, 
+tkid int, 
+sid int, 
+tdtime timestamp, 
+content varchar(100),
+primary key(tdid),
+foreign key(tkid) references ticket,
+foreign key(sid) references support);
+
+--- ticket 1 assigned  
+insert into ticket_detail 
+values(1,1,1,timestamp '2022-10-1 11:05:00.00','ticket assigned to support staff');
+
+-- ticket 1 
+insert into ticket_detail 
+values(2,1,1,timestamp '2022-10-1 11:10:00.00','instructions sent to client');
+
+-- ticket 2 assigned
+insert into ticket_detail 
+values(3, 2, 1, timestamp '2022-10-2 14:00:00.00', 
+'ticket assigned to support staff');
+
+-- ticket 2  resolved. 
+insert into ticket_detail 
+values(4, 2, 1, timestamp '2022-10-3 8:00:00.00', 
+'permission changed to allow client access registration page');
+
+-- ticket 4, assigned. 
+insert into ticket_detail 
+values(5, 4, 2, timestamp '2022-10-6 10:00:00.00', 
+'ticket assigned to support staff');
+
+-- ticket 3, assigned. 
+insert into ticket_detail 
+values(6, 3, 3, timestamp '2022-10-3 16:05:00.00', 
+'ticket assigned to support staff');
+
+commit;
+
+Problem 1: 
+[40 points] Please create a PL/SQL function that given a topic ID, print out total number of child topics under that topic (i.e., parent ID = input topic ID).
+Please also call this function with input 1 and 5.  
+
+
+
+create or replace function
+count_childtopic(v_tid int)
+return int 
+is
+v_count int; 
+begin
+select count(*) into v_count from topic where ptid = v_tid; 
+ return v_count;
+end; 
+/
+set serveroutput on; 
+declare
+ v_count int; 
+begin
+ -- normal case 
+ v_count := count_childtopic(1);
+ dbms_output.put_line(v_count || ' under topic 1');
+ v_count := count_childtopic(5);
+ dbms_output.put_line(v_count || ' under topic 2');
+end; 
+/
+
+
+ 
+
+Problem 2: [60 points] Please create a PL/SQL procedure which assigns a ticket to a support staff. The procedure takes a ticket ID and a staff ID as input and does the following steps.  
+1) it checks whether there is a ticket with the given ticket ID. If not print a message invalid ticket ID and stops. 
+2) it then checks whether a support staff has the input staff ID. If not print a message invalid staff ID and stop. 
+3) it assigns the ticket to the support staff (update the sid in ticket table), update status to 2, and insert a row into ticket_detail with appropriate tkid, sid, tdtime as current time (systimestamp), and content as 'ticket assigned to support staff'.
+
+Please call this procedure with an invalid input and a valid input. 
+
+Hint: create a sequence to generate new primary key value in ticket_detail table. 
+
+drop sequence tdid_seq;
+create sequence tdid_seq start with 7;
+/
+create or replace procedure assign_staff(v_tkid int, v_sid int)
+as 
+v_count int; 
+begin 
+-- step 1
+ select count(*) into v_count from ticket where tkid = v_tkid;
+ if v_count = 0 then 
+  dbms_output.put_line('Invalid ticket ID');
+ else 
+ -- step 2
+    select count(*) into v_count from support where sid=v_sid;
+	if v_count = 0 then 
+	 dbms_output.put_line('Invalid staff ID');
+	else
+		update ticket set status = 2, sid = v_sid where tkid = v_tkid;
+	insert into ticket_detail values(tdid_seq.nextval, v_tkid, v_sid, systimestamp,'ticket assigned to support staff');
+  end if; 
+ end if;
+end;
+/
+-- invalid ticket ID
+exec assign_staff(10,2);
+-- invalid staff id 
+exec assign_staff(2,10);
+-- valid 
+exec assign_staff(5,2);
+select * from ticket;
+-- new status and updated sid 
+select * from ticket_detail;
+-- new row inserted 
