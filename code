@@ -141,76 +141,112 @@ values(6, 3, 3, timestamp '2022-10-3 16:05:00.00',
 
 commit;
 
-Problem 1: 
-[40 points] Please create a PL/SQL function that given a topic ID, print out total number of child topics under that topic (i.e., parent ID = input topic ID).
-Please also call this function with input 1 and 5.  
+Problem 1: [50 points] Please write an anonymous PL/SQL program to print out the first 10 numbers of the following sequence F(n).  
+F(0) = 2, F(1)=5. F(n)=5*F(n-1)-4*F(n-2).
+E.g., F(3) = 5*F(2) - 4 F(1) = 5*5-4*2=17,....
+Your program will print out F(0),F(1),..., F(9).
 
 
+Hint: use three variables, the first storing F(n), the second storing F(n-1), and the third storing F(n-2). Think of how to compute the first variable from the other two and how to update the other two variables in each iteration. 
 
-create or replace function
-count_childtopic(v_tid int)
-return int 
-is
-v_count int; 
-begin
-select count(*) into v_count from topic where ptid = v_tid; 
- return v_count;
-end; 
-/
-set serveroutput on; 
+set serveroutput on;
 declare
- v_count int; 
+i integer;
+f1 integer;
+f2 integer; 
+f3 integer;
 begin
- -- normal case 
- v_count := count_childtopic(1);
- dbms_output.put_line(v_count || ' under topic 1');
- v_count := count_childtopic(5);
- dbms_output.put_line(v_count || ' under topic 2');
-end; 
-/
+ f1:=2;
+ f2:=5; 
+ i:= 2;
+ dbms_output.put_line(f1);
+ dbms_output.put_line(f2);
+ loop
+   f3:=5*f2-4*f1;
+   dbms_output.put_line(f3);
+   i:=i+1;
+   f1:=f2; -- update f(n-2) to f(n-1)
+   f2:=f3; -- update f(n-1) to f(n)   
+   exit when i> 9;   
+ end loop;
+end;
 
 
- 
+-- Result: 
+2
+5
+17
+65
+257
+1025
+4097
+16385
+65537
+262145
 
-Problem 2: [60 points] Please create a PL/SQL procedure which assigns a ticket to a support staff. The procedure takes a ticket ID and a staff ID as input and does the following steps.  
-1) it checks whether there is a ticket with the given ticket ID. If not print a message invalid ticket ID and stops. 
-2) it then checks whether a support staff has the input staff ID. If not print a message invalid staff ID and stop. 
-3) it assigns the ticket to the support staff (update the sid in ticket table), update status to 2, and insert a row into ticket_detail with appropriate tkid, sid, tdtime as current time (systimestamp), and content as 'ticket assigned to support staff'.
+-- or using for loop
+declare
+i integer;
+f1 integer;
+f2 integer; 
+f3 integer;
+begin
+ f1:=2;
+ f2:=5; 
+ i:= 2;
+ dbms_output.put_line(f1);
+ dbms_output.put_line(f2);
+ for i in 2..9 loop 
+   f3:=5*f2-4*f1;
+   dbms_output.put_line(f3);   
+   f1:=f2; -- update f(n-2) to f(n-1)
+   f2:=f3; -- update f(n-1) to f(n)      
+ end loop;
+end;
 
-Please call this procedure with an invalid input and a valid input. 
+--- math formula 
+f(n)= 4^n +  1^n
+f(0) = 2 
+f(1)= 5
+f(2) = 17
+f(3) = 5*17-4*5
+=65
 
-Hint: create a sequence to generate new primary key value in ticket_detail table. 
+Problem 2: Write anonymous PL/SQL Please write an anonymous PL/SQL program to do ALL of the following:
+1) check whether there is a ticket with ID 1.
+2) Print out name of the client who submitted the ticket with ID 1, submission time, description and status. 
+3) print out all rows in ticket_detail that is associated with this ticket (with ID 1), including name of support staff who entered the information, time of the record, and content.
 
-drop sequence tdid_seq;
-create sequence tdid_seq start with 7;
-/
-create or replace procedure assign_staff(v_tkid int, v_sid int)
-as 
+Hint: use select count(*) and if then else for step 1. 
+use an implicit cursor to do step 2.
+Use an explicit cursor for step 3. 
+[60 points]
+
+declare
+cursor c1 is 
+select sname, tdtime, content
+from ticket_detail t, support s  
+where s.sid = t.sid and t.tkid = 1;
 v_count int; 
+v_clname client.clname%type;
+v_tktime timestamp;
+v_status int;
+v_description ticket.description%type;
 begin 
--- step 1
- select count(*) into v_count from ticket where tkid = v_tkid;
+ select count(*) into v_count from ticket where tkid = 1;
  if v_count = 0 then 
   dbms_output.put_line('Invalid ticket ID');
  else 
- -- step 2
-    select count(*) into v_count from support where sid=v_sid;
-	if v_count = 0 then 
-	 dbms_output.put_line('Invalid staff ID');
-	else
-		update ticket set status = 2, sid = v_sid where tkid = v_tkid;
-	insert into ticket_detail values(tdid_seq.nextval, v_tkid, v_sid, systimestamp,'ticket assigned to support staff');
-  end if; 
+ -- print ticket information 
+  select clname, tktime, status, description 
+  into v_clname, v_tktime, v_status, v_description
+  from ticket t, client c 
+  where tkid = 1 and t.clid = c.clid;
+  dbms_output.put_line(v_clname || ' submitted the ticket at ' || v_tktime || ' current status ' || v_status || ' description ' || v_description);
+  for r in c1 loop
+   dbms_output.put_line('Detail at ' || r.tdtime || ' entered by ' || r.sname || ' content: ' || r.content);  
+  end loop;
  end if;
 end;
 /
--- invalid ticket ID
-exec assign_staff(10,2);
--- invalid staff id 
-exec assign_staff(2,10);
--- valid 
-exec assign_staff(5,2);
-select * from ticket;
--- new status and updated sid 
-select * from ticket_detail;
--- new row inserted 
+
